@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import AuthLayout from "@/components/AuthLayout";
 import { Eye, EyeOff, Lock, Check, X } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -94,26 +95,40 @@ const ResetPassword = () => {
     setLoading(true);
     
     try {
-      // In a real application, this would connect to Supabase
-      console.log("Reset password:", formData.password);
+      const email = sessionStorage.getItem("resetEmail");
+      if (!email) throw new Error("Email not found");
       
-      // Simulating API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Get the current session (the user should be signed in from the previous step)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("No active session found. Please try again from the beginning.");
+      }
+      
+      // Update the password
+      const { data, error } = await supabase.auth.updateUser({
+        password: formData.password
+      });
+      
+      if (error) throw error;
       
       toast({
         title: "Password reset successful",
         description: "Your password has been reset. You can now sign in with your new password.",
       });
       
+      // Sign out the user
+      await supabase.auth.signOut();
+      
       // Clear session storage
       sessionStorage.removeItem("resetEmail");
       
       // Navigate to sign in page
       setTimeout(() => navigate("/signin"), 1000);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Password reset failed",
-        description: "We couldn't reset your password. Please try again.",
+        description: error.message || "We couldn't reset your password. Please try again.",
         variant: "destructive",
       });
       console.error(error);

@@ -7,39 +7,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import AuthLayout from "@/components/AuthLayout";
-import { Mail, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft, Lock, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      // In a real application, this would connect to Supabase
-      console.log("Password reset request for:", email);
-      
-      // Simulating API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast({
-        title: "Email validated",
-        description: "Please proceed to verify your identity.",
+      // Verify user credentials
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
       });
       
-      // Store email in sessionStorage to use in the next page
+      if (error) throw error;
+      
+      // Store the email for the reset password page
       sessionStorage.setItem("resetEmail", email);
       
-      // Navigate to validate email page
-      navigate("/validate-email");
-    } catch (error) {
       toast({
-        title: "Something went wrong",
-        description: "We couldn't validate your email. Please try again.",
+        title: "Verification successful",
+        description: "You can now set a new password.",
+      });
+      
+      // Navigate to reset password page
+      navigate("/reset-password");
+    } catch (error: any) {
+      toast({
+        title: "Verification failed",
+        description: error.message || "The email or current password is incorrect.",
         variant: "destructive",
       });
       console.error(error);
@@ -50,8 +55,8 @@ const ForgotPassword = () => {
 
   return (
     <AuthLayout 
-      title="Reset your password" 
-      subtitle="Enter your email to begin the password reset process"
+      title="Verify your identity" 
+      subtitle="Enter your email and current password to continue"
     >
       <Card className="p-6 shadow-sm border animate-fade-up backdrop-blur-sm">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -71,13 +76,39 @@ const ForgotPassword = () => {
                 required
               />
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword">Current Password</Label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <Lock size={18} />
+              </div>
+              <Input
+                id="currentPassword"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="pl-10 pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             <p className="text-xs text-muted-foreground">
-              We'll verify your email and then send a verification code to it.
+              Enter your current password to verify your identity.
             </p>
           </div>
           
           <Button type="submit" className="w-full animate-hover-rise" disabled={loading}>
-            {loading ? "Validating..." : "Continue"}
+            {loading ? "Verifying..." : "Continue"}
           </Button>
         </form>
       </Card>

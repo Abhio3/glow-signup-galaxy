@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import AuthLayout from "@/components/AuthLayout";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -36,11 +37,12 @@ const SignIn = () => {
     setLoading(true);
     
     try {
-      // In a real application, this would connect to Supabase
-      console.log("Sign in with:", formData);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
       
-      // Simulating API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (error) throw error;
       
       toast({
         title: "Welcome back!",
@@ -49,10 +51,10 @@ const SignIn = () => {
       
       // Navigate to dashboard
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Authentication failed",
-        description: "Please check your credentials and try again.",
+        description: error.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
       console.error(error);
