@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import AuthLayout from "@/components/AuthLayout";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 
 const SignIn = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -46,7 +47,8 @@ const SignIn = () => {
         description: "You have successfully signed in.",
       });
       
-      // In a real application, we would navigate to the dashboard
+      // Navigate to dashboard
+      navigate("/dashboard");
     } catch (error) {
       toast({
         title: "Authentication failed",
@@ -141,9 +143,9 @@ const SignIn = () => {
       </Card>
 
       <div className="mt-4 text-center text-sm text-muted-foreground animate-fade-up">
-        Don't have an account?{" "}
-        <Link to="/signup" className="text-primary underline hover:text-primary/80 transition-colors">
-          Sign up
+        Having trouble signing in?{" "}
+        <Link to="/forgot-password" className="text-primary underline hover:text-primary/80 transition-colors">
+          Reset your password
         </Link>
       </div>
     </AuthLayout>

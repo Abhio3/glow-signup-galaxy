@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import AuthLayout from "@/components/AuthLayout";
-import { Eye, EyeOff, Lock, Check } from "lucide-react";
+import { Eye, EyeOff, Lock, Check, X } from "lucide-react";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -21,18 +21,71 @@ const ResetPassword = () => {
     confirmPassword: ""
   });
 
+  const [validationChecks, setValidationChecks] = useState({
+    minLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecial: false,
+    passwordsMatch: false
+  });
+
+  // Check if user came from the validation flow
+  useEffect(() => {
+    const storedEmail = sessionStorage.getItem("resetEmail");
+    if (!storedEmail) {
+      // Redirect back if no email is stored (user didn't go through the flow)
+      toast({
+        title: "Invalid request",
+        description: "Please start the password reset process from the beginning.",
+        variant: "destructive",
+      });
+      navigate("/forgot-password");
+    }
+  }, [navigate, toast]);
+
+  // Validate password as user types
+  useEffect(() => {
+    const { password, confirmPassword } = formData;
+    
+    setValidationChecks({
+      minLength: password.length >= 8,
+      hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecial: /[^A-Za-z0-9]/.test(password),
+      passwordsMatch: password === confirmPassword && password !== ""
+    });
+  }, [formData]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const isPasswordStrong = () => {
+    // Require at least 4 of the 5 validation checks to pass
+    const { minLength, hasUppercase, hasLowercase, hasNumber, hasSpecial } = validationChecks;
+    const passedChecks = [minLength, hasUppercase, hasLowercase, hasNumber, hasSpecial].filter(Boolean).length;
+    return passedChecks >= 4;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.password !== formData.confirmPassword) {
+    if (!validationChecks.passwordsMatch) {
       toast({
         title: "Passwords don't match",
         description: "Please ensure both passwords match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!isPasswordStrong()) {
+      toast({
+        title: "Password too weak",
+        description: "Please create a stronger password that meets the requirements.",
         variant: "destructive",
       });
       return;
@@ -52,6 +105,9 @@ const ResetPassword = () => {
         description: "Your password has been reset. You can now sign in with your new password.",
       });
       
+      // Clear session storage
+      sessionStorage.removeItem("resetEmail");
+      
       // Navigate to sign in page
       setTimeout(() => navigate("/signin"), 1000);
     } catch (error) {
@@ -69,7 +125,7 @@ const ResetPassword = () => {
   return (
     <AuthLayout 
       title="Set new password" 
-      subtitle="Create a new password for your account"
+      subtitle="Create a new secure password for your account"
     >
       <Card className="p-6 shadow-sm border animate-fade-up backdrop-blur-sm">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -88,7 +144,6 @@ const ResetPassword = () => {
                 onChange={handleChange}
                 className="pl-10 pr-10"
                 required
-                minLength={8}
               />
               <button
                 type="button"
@@ -99,9 +154,42 @@ const ResetPassword = () => {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Password must be at least 8 characters long
-            </p>
+            
+            {/* Password strength indicators */}
+            <div className="grid grid-cols-2 gap-2 text-xs mt-2">
+              <div className={`flex items-center ${validationChecks.minLength ? 'text-green-600' : 'text-muted-foreground'}`}>
+                {validationChecks.minLength ? <Check size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                At least 8 characters
+              </div>
+              <div className={`flex items-center ${validationChecks.hasUppercase ? 'text-green-600' : 'text-muted-foreground'}`}>
+                {validationChecks.hasUppercase ? <Check size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                Uppercase letter
+              </div>
+              <div className={`flex items-center ${validationChecks.hasLowercase ? 'text-green-600' : 'text-muted-foreground'}`}>
+                {validationChecks.hasLowercase ? <Check size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                Lowercase letter
+              </div>
+              <div className={`flex items-center ${validationChecks.hasNumber ? 'text-green-600' : 'text-muted-foreground'}`}>
+                {validationChecks.hasNumber ? <Check size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                Number
+              </div>
+              <div className={`flex items-center ${validationChecks.hasSpecial ? 'text-green-600' : 'text-muted-foreground'}`}>
+                {validationChecks.hasSpecial ? <Check size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                Special character
+              </div>
+            </div>
+            
+            {/* Password strength bar */}
+            <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-300 ${
+                  formData.password === "" ? "w-0" :
+                  isPasswordStrong() ? "w-full bg-green-500" :
+                  validationChecks.minLength && (validationChecks.hasUppercase || validationChecks.hasLowercase) ? "w-1/2 bg-yellow-500" :
+                  "w-1/4 bg-red-500"
+                }`}
+              />
+            </div>
           </div>
           
           <div className="space-y-2">
@@ -117,9 +205,12 @@ const ResetPassword = () => {
                 placeholder="••••••••"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="pl-10 pr-10"
+                className={`pl-10 pr-10 ${
+                  formData.confirmPassword && !validationChecks.passwordsMatch 
+                    ? "border-red-500 focus-visible:ring-red-500" 
+                    : ""
+                }`}
                 required
-                minLength={8}
               />
               <button
                 type="button"
@@ -130,9 +221,18 @@ const ResetPassword = () => {
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {formData.confirmPassword && !validationChecks.passwordsMatch && (
+              <p className="text-xs text-red-500 mt-1">
+                Passwords don't match
+              </p>
+            )}
           </div>
           
-          <Button type="submit" className="w-full animate-hover-rise" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full animate-hover-rise" 
+            disabled={loading || !isPasswordStrong() || !validationChecks.passwordsMatch}
+          >
             {loading ? "Resetting password..." : "Reset password"}
           </Button>
         </form>

@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,9 @@ import AuthLayout from "@/components/AuthLayout";
 import { Mail, ArrowLeft } from "lucide-react";
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const [email, setEmail] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,16 +26,20 @@ const ForgotPassword = () => {
       // Simulating API call delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      setEmailSent(true);
-      
       toast({
-        title: "Check your email",
-        description: "We've sent you a password reset link.",
+        title: "Email validated",
+        description: "Please proceed to verify your identity.",
       });
+      
+      // Store email in sessionStorage to use in the next page
+      sessionStorage.setItem("resetEmail", email);
+      
+      // Navigate to validate email page
+      navigate("/validate-email");
     } catch (error) {
       toast({
         title: "Something went wrong",
-        description: "We couldn't send a reset link. Please try again.",
+        description: "We couldn't validate your email. Please try again.",
         variant: "destructive",
       });
       console.error(error);
@@ -47,60 +51,35 @@ const ForgotPassword = () => {
   return (
     <AuthLayout 
       title="Reset your password" 
-      subtitle={emailSent 
-        ? "Check your email for a reset link" 
-        : "Enter your email and we'll send a reset link"
-      }
+      subtitle="Enter your email to begin the password reset process"
     >
       <Card className="p-6 shadow-sm border animate-fade-up backdrop-blur-sm">
-        {!emailSent ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <Mail size={18} />
-                </div>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <Mail size={18} />
               </div>
-              <p className="text-xs text-muted-foreground">
-                We'll send you a link to reset your password. If you don't see it, check your spam folder.
-              </p>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10"
+                required
+              />
             </div>
-            
-            <Button type="submit" className="w-full animate-hover-rise" disabled={loading}>
-              {loading ? "Sending link..." : "Send reset link"}
-            </Button>
-          </form>
-        ) : (
-          <div className="space-y-4 py-2">
-            <div className="text-center space-y-2">
-              <div className="mx-auto bg-primary/10 rounded-full p-3 w-fit">
-                <Mail className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium">Check your email</h3>
-              <p className="text-sm text-muted-foreground">
-                We've sent a password reset link to <span className="font-medium">{email}</span>
-              </p>
-            </div>
-            
-            <Button 
-              variant="outline" 
-              className="w-full animate-hover-rise"
-              onClick={() => setEmailSent(false)}
-            >
-              Didn't receive the email? Try again
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              We'll verify your email and then send a verification code to it.
+            </p>
           </div>
-        )}
+          
+          <Button type="submit" className="w-full animate-hover-rise" disabled={loading}>
+            {loading ? "Validating..." : "Continue"}
+          </Button>
+        </form>
       </Card>
 
       <div className="mt-4 text-center text-sm animate-fade-up">

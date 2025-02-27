@@ -24,13 +24,9 @@ const NotFound = () => {
           Oops! We couldn't find the page you're looking for.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex justify-center">
           <Button asChild variant="default" className="animate-hover-rise">
-            <Link to="/signin">Go to Sign In</Link>
-          </Button>
-          
-          <Button asChild variant="outline" className="animate-hover-rise">
-            <Link to="/signup">Create Account</Link>
+            <Link to="/signin">Return to Sign In</Link>
           </Button>
         </div>
       </div>
